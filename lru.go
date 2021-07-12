@@ -22,6 +22,8 @@ type ConfigNode struct {
 
 	PreNode  *ConfigNode
 	NextNode *ConfigNode
+
+	visitTimeUnix int64
 }
 
 type Cache struct {
@@ -101,6 +103,9 @@ func (c *Cache) updateLinkLish() {
 	for {
 		select {
 		case node := <-c.linkListChannel:
+			//更新访问时间
+			node.visitTimeUnix = time.Now().Unix()
+			//移到队列头部
 			c.removeToLinkListHead(node)
 		}
 	}
@@ -134,23 +139,30 @@ func (c *Cache) gc() {
 	for {
 		select {
 		case <-tick:
-			log.Println("start gc...")
 			node := c.linkListHead
 			var num int64
+			lastUnix := time.Now().AddDate(0,0,-3).Unix()
+			//lastUnix := time.Now().Unix() - 60
+
+			//遍历链表
 			for node != nil {
 				num++
-				//超过了限制
-				if num > c.maxSize {
-					//fmt.Println("del node: ",node)
+				//1. 超过了限制后面的删掉
+				//2. 最后使用时间是三天前也删掉
+				if num > c.maxSize || node.visitTimeUnix < lastUnix {
+					//删除node操作
 					if node.PreNode != nil {
 						node.PreNode.NextNode = nil
 						node.PreNode = nil
+					}else{
+						//node.PreNode==nil 说明当前是第一个节点
+						c.linkListHead = node.NextNode
 					}
 					c.cache.Delete(c.cacheHashKey(node.Key.Key, node.Key.GroupId, node.Key.AppName))
 				}
 				node = node.NextNode
 			}
-			log.Println("current length:", num)
+			log.Println("start gc, current length:", num)
 			c.memyinfo()
 		}
 	}
@@ -171,6 +183,7 @@ func (c *Cache) cacheSplitKey(key string) NodeKey {
 }
 
 
+
 //测试方法
 func (c *Cache) memyinfo() {
 	var ms runtime.MemStats
@@ -184,9 +197,8 @@ func (c *Cache) dump() {
 		fmt.Println(node)
 		node = node.NextNode
 	}
-
 	c.cache.Range(func(key, value interface{}) bool {
-		fmt.Println(key, value)
+		fmt.Println(key,value)
 		return true
 	})
 }
