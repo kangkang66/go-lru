@@ -26,7 +26,7 @@ type ConfigNode struct {
 
 type Cache struct {
 	cache                sync.Map
-	lastTimeLinkListHead *ConfigNode
+	linkListHead *ConfigNode
 	linkListChannel      chan *ConfigNode
 	maxSize              int64
 }
@@ -34,7 +34,7 @@ type Cache struct {
 func NewCache(maxSize int64) *Cache {
 	c := &Cache{
 		cache:                sync.Map{},
-		lastTimeLinkListHead: nil,
+		linkListHead: nil,
 		linkListChannel:      make(chan *ConfigNode, maxSize),
 		maxSize:              maxSize,
 	}
@@ -107,12 +107,17 @@ func (c *Cache) updateLinkLish() {
 }
 func (c *Cache) removeToLinkListHead(node *ConfigNode) {
 	//是不是第一个
-	if c.lastTimeLinkListHead == nil {
-		c.lastTimeLinkListHead = node
+	if c.linkListHead == nil {
+		c.linkListHead = node
 		return
 	}
+	//当前head==node不移动
+	if c.linkListHead == node {
+		return
+	}
+
 	//已经存在,把当前node指向当前头结点
-	head := c.lastTimeLinkListHead
+	head := c.linkListHead
 	head.PreNode = node
 
 	if node.PreNode != nil {
@@ -120,7 +125,7 @@ func (c *Cache) removeToLinkListHead(node *ConfigNode) {
 		node.PreNode = nil
 	}
 	node.NextNode = head
-	c.lastTimeLinkListHead = node
+	c.linkListHead = node
 }
 
 //每10s触发一次gc
@@ -129,8 +134,8 @@ func (c *Cache) gc() {
 	for {
 		select {
 		case <-tick:
-			fmt.Println("start gc...")
-			node := c.lastTimeLinkListHead
+			log.Println("start gc...")
+			node := c.linkListHead
 			var num int64
 			for node != nil {
 				num++
@@ -145,7 +150,7 @@ func (c *Cache) gc() {
 				}
 				node = node.NextNode
 			}
-			fmt.Println("current length:", num)
+			log.Println("current length:", num)
 			c.memyinfo()
 		}
 	}
@@ -173,7 +178,7 @@ func (c *Cache) memyinfo() {
 	log.Printf("Alloc:%d(bytes) Sys:%d(bytes) HeapObjects:%d(bytes) HeapInuse:%d(bytes)", ms.Alloc, ms.Sys, ms.HeapObjects, ms.HeapInuse)
 }
 func (c *Cache) dump() {
-	node := c.lastTimeLinkListHead
+	node := c.linkListHead
 	for node != nil {
 		fmt.Printf("%p -> ", node)
 		fmt.Println(node)
