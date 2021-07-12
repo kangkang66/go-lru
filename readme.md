@@ -4,6 +4,12 @@
 
 ## 使用
 
+### 引用
+
+```
+go get github.com/kangkang66/go-lru
+```
+
 ### 初始化
 ```
 cache := NewCache(10)
