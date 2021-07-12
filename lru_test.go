@@ -22,6 +22,8 @@ func TestCache_StoreOrUpdate(t *testing.T) {
 
 	cache.dump()
 
+	fmt.Println(cache.AllKeys())
+
 	for range time.Tick(10 * time.Second) {
 		fmt.Println("观察内存是否下降...")
 	}

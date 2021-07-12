@@ -4,14 +4,20 @@ import (
 	"fmt"
 	"log"
 	"runtime"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
 
-type ConfigNode struct {
+type NodeKey struct {
 	Key     string
 	GroupId int64
 	AppName string
+}
+
+type ConfigNode struct {
+	Key 	NodeKey
 	Content []byte
 
 	PreNode  *ConfigNode
@@ -62,9 +68,11 @@ func (c *Cache) StoreOrUpdate(key string, groupId int64, appName string, content
 	if !ok {
 		//不存在新存储
 		node = &ConfigNode{
-			Key:     key,
-			GroupId: groupId,
-			AppName: appName,
+			Key: NodeKey{
+				Key:     key,
+				GroupId: groupId,
+				AppName: appName,
+			},
 			Content: content,
 		}
 	} else {
@@ -75,6 +83,14 @@ func (c *Cache) StoreOrUpdate(key string, groupId int64, appName string, content
 	c.linkListChannel <- node
 	//更新缓存
 	c.cache.Store(cachekey, node)
+	return
+}
+//获取所有的keys
+func (c *Cache) AllKeys() (keys []NodeKey) {
+	c.cache.Range(func(key, value interface{}) bool {
+		keys = append(keys,c.cacheSplitKey(key.(string)))
+		return true
+	})
 	return
 }
 
@@ -123,7 +139,7 @@ func (c *Cache) gc() {
 						node.PreNode.NextNode = nil
 						node.PreNode = nil
 					}
-					c.cache.Delete(c.cacheHashKey(node.Key, node.GroupId, node.AppName))
+					c.cache.Delete(c.cacheHashKey(node.Key.Key, node.Key.GroupId, node.Key.AppName))
 				}
 				node = node.NextNode
 			}
@@ -133,9 +149,20 @@ func (c *Cache) gc() {
 	}
 }
 
+//处理cache key
 func (c *Cache) cacheHashKey(key string, groupId int64, appName string) string {
 	return fmt.Sprintf("%s_%d_%s", key, groupId, appName)
 }
+func (c *Cache) cacheSplitKey(key string) NodeKey {
+	ks := strings.Split(key,"_")
+	gid,_ := strconv.ParseInt(ks[1],10,64)
+	return NodeKey{
+		Key:     ks[0],
+		GroupId: gid,
+		AppName: ks[2],
+	}
+}
+
 
 //测试方法
 func (c *Cache) memyinfo() {

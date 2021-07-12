@@ -28,5 +28,8 @@ cache.StoreOrUpdate("config_key", 1, "com.app.name", []byte(`{"name":"zhangsan"}
 value,err := cache.Get("config_key", 1, "com.app.name")
 ```
 
-
+### 获取当前的keys
+```
+keys := cache.AllKeys()
+```
 
