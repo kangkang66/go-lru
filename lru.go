@@ -85,14 +85,16 @@ func (c *Cache) StoreOrUpdate(key string, groupId int64, appName string, content
 	c.cache.Store(cachekey, node)
 	return
 }
-//获取所有的keys
-func (c *Cache) AllKeys() (keys []NodeKey) {
+
+//获取所有的data
+func (c *Cache) AllData() (data []ConfigNode) {
 	c.cache.Range(func(key, value interface{}) bool {
-		keys = append(keys,c.cacheSplitKey(key.(string)))
+		data = append(data, *(value.(*ConfigNode)))
 		return true
 	})
 	return
 }
+
 
 //异步维护链表
 func (c *Cache) updateLinkLish() {
