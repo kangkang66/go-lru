@@ -135,7 +135,7 @@ func (c *Cache) removeToLinkListHead(node *ConfigNode) {
 
 //每10s触发一次gc
 func (c *Cache) gc() {
-	tick := time.Tick(10 * time.Second)
+	tick := time.Tick(30 * time.Minute)
 	for {
 		select {
 		case <-tick:
