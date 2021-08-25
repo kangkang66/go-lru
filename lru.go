@@ -135,7 +135,7 @@ func (c *Cache) removeToLinkListHead(node *ConfigNode) {
 
 //每10s触发一次gc
 func (c *Cache) gc() {
-	tick := time.Tick(30 * time.Minute)
+	tick := time.Tick(1 * time.Hour)
 	for {
 		select {
 		case <-tick:
@@ -170,7 +170,14 @@ func (c *Cache) gc() {
 
 //处理cache key
 func (c *Cache) cacheHashKey(key string, groupId int64, appName string) string {
-	return fmt.Sprintf("%s_%d_%s", key, groupId, appName)
+	var builder strings.Builder
+	builder.WriteString(key)
+	builder.WriteString("_")
+	builder.WriteString(strconv.FormatInt(groupId,10))
+	builder.WriteString("_")
+	builder.WriteString(appName)
+	return builder.String()
+	//return fmt.Sprintf("%s_%d_%s", key, groupId, appName)
 }
 func (c *Cache) cacheSplitKey(key string) NodeKey {
 	ks := strings.Split(key,"_")
